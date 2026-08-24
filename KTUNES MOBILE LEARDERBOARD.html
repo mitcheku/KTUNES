@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>K-TUNES Mobile Scoreboard</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #161f30;
+            --accent-glow: #ff007f; /* Electric Pink */
+            --accent-alt: #00d2ff;  /* Neon Blue */
+            --text-main: #f0f6fc;
+            --text-sub: #8b949e;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --gold: #ffd700;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            -webkit-tap-highlight-color: transparent; /* Prevents gray box on iOS touch */
+        }
+
+        body {
+            font-family: var(--font);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 1rem 0.75rem 2rem 0.75rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Floating Animated Background Notes */
+        .notes-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            opacity: 0.12;
+            pointer-events: none;
+        }
+
+        .note {
+            position: absolute;
+            color: var(--text-sub);
+            font-size: 1.5rem;
+            animation: floatNotes 10s linear infinite;
+            bottom: -40px;
+        }
+
+        @keyframes floatNotes {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+
+        .note:nth-child(1) { left: 8%; animation-delay: 0s; }
+        .note:nth-child(2) { left: 28%; animation-delay: 2s; font-size: 2.2rem; }
+        .note:nth-child(3) { left: 55%; animation-delay: 4s; }
+        .note:nth-child(4) { left: 78%; animation-delay: 1.5s; font-size: 2rem; }
+
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Mobile Header */
+        h1.main-title {
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: var(--accent-glow);
+            text-shadow: 0 0 15px var(--accent-glow);
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-sub);
+            margin-bottom: 1.25rem;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        /* Mobile Add Player Control */
+        .admin-panel {
+            background: rgba(22, 31, 48, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 0.85rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 1.25rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            background: #0e1626;
+            border: 1px solid #2d3748;
+            color: var(--text-main);
+            padding: 0.75rem 0.85rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-alt);
+        }
+
+        button.main-btn {
+            background: var(--accent-alt);
+            color: #0b0f19;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        button.main-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Winner Podium Display */
+        .winner-podium {
+            background: linear-gradient(135deg, rgba(255, 0, 127, 0.18), rgba(0, 210, 255, 0.18));
+            border: 2px solid var(--accent-glow);
+            border-radius: 14px;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 0, 127, 0.2);
+            display: none;
+        }
+
+        .podium-title {
+            color: var(--accent-glow);
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.2rem;
+        }
+
+        .winner-names {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+        }
+
+        .winner-score {
+            font-size: 0.9rem;
+            color: var(--accent-alt);
+            margin-top: 0.2rem;
+            font-weight: 700;
+        }
+
+        /* Mobile Performer List */
+        .performers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .performer-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: border-color 0.2s;
+        }
+
+        .card-header {
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .left-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .rank-badge {
+            font-size: 1.1rem;
+            font-weight: 800;
+            width: 24px;
+            text-align: center;
+        }
+
+        .performer-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .right-info {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .total-score-badge {
+            background: rgba(0, 210, 255, 0.1);
+            color: var(--accent-alt);
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            border: 1px solid rgba(0, 210, 255, 0.2);
+        }
+
+        .btn-toggle-rounds {
+            background: #25334d;
+            color: var(--text-main);
+            border: none;
+            padding: 0.4rem 0.65rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-delete {
+            background: transparent;
+            color: #f85149;
+            border: none;
+            font-size: 1.3rem;
+            padding: 0 0.25rem;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        /* 20-Round Grid Drawer */
+        .rounds-drawer {
+            display: none; /* Toggled with JS */
+            padding: 1rem 0.85rem;
+            background: #0e1626;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .rounds-drawer.open {
+            display: block;
+        }
+
+        .drawer-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        .rounds-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 rounds per row on mobile */
+            gap: 0.5rem;
+        }
+
+        .round-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .round-label {
+            font-size: 0.65rem;
+            color: var(--text-sub);
+            font-weight: 700;
+        }
+
+        .round-input {
+            width: 100%;
+            height: 38px;
+            background: #161f30;
+            border: 1px solid #2d3748;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .round-input:focus {
+            border-color: var(--accent-glow);
+            background: #1f1126;
+        }
+
+        /* Musical Score Pulse Animation */
+        @keyframes pulseScore {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); color: #fff; }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            display: inline-block;
+            animation: pulseScore 0.35s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Floating Musical Notes -->
+    <div class="notes-bg">
+        <div class="note">&#9835;</div>
+        <div class="note">&#9833;</div>
+        <div class="note">&#9834;</div>
+        <div class="note">&#9836;</div>
+    </div>
+
+    <div class="app-container">
+        <h1 class="main-title">K-TUNES</h1>
+        <p class="subtitle">Mobile 20-Round Leaderboard</p>
+
+        <!-- Admin Input -->
+        <div class="admin-panel">
+            <input type="text" id="performerName" placeholder="Performer's Name..." autocomplete="off">
+            <button class="main-btn" onclick="addPerformer()">Add</button>
+        </div>
+
+        <!-- Leader Podium (Handles Ties) -->
+        <div id="winnerPodium" class="winner-podium">
+            <p class="podium-title">&#127942; Overall Leader(s) &#127942;</p>
+            <div id="winnerNames" class="winner-names"></div>
+            <p id="winnerScoreDisplay" class="winner-score"></p>
+        </div>
+
+        <!-- Performers Card List -->
+        <div id="performersList" class="performers-list">
+            <!-- Dynamic Mobile Cards inserted here -->
+        </div>
+    </div>
+
+    <script>
+        // App State
+        let performers = [
+            { id: 1, name: "DJ Sparkle", rounds: Array(20).fill(0), expanded: false },
+            { id: 2, name: "Luna Beats", rounds: Array(20).fill(0), expanded: false },
+            { id: 3, name: "Rhythm Rogue", rounds: Array(20).fill(0), expanded: false }
+        ];
+
+        // Seed initial sample scores
+        performers[0].rounds[0] = 50; performers[0].rounds[1] = 45;
+        performers[1].rounds[0] = 50; performers[1].rounds[1] = 45; // Tied for 1st
+        performers[2].rounds[0] = 40; performers[2].rounds[1] = 30;
+
+        function addPerformer() {
+            const input = document.getElementById('performerName');
+            const name = input.value.trim();
+            if (!name) return;
+
+            performers.push({
+                id: Date.now(),
+                name: name,
+                rounds: Array(20).fill(0),
+                expanded: true // Expand newly added performer by default
+            });
+
+            input.value = '';
+            render();
+        }
+
+        function deletePerformer(id) {
+            if (!confirm("Remove this performer?")) return;
+            performers = performers.filter(p => p.id !== id);
+            render();
+        }
+
+        function toggleDrawer(id) {
+            const performer = performers.find(p => p.id === id);
+            if (performer) {
+                performer.expanded = !performer.expanded;
+                render();
+            }
+        }
+
+        function updateRoundScore(id, roundIndex, value) {
+            const parsedVal = parseInt(value) || 0;
+            const performer = performers.find(p => p.id === id);
+            if (performer) {
+                performer.rounds[roundIndex] = parsedVal;
+                render();
+
+                // Trigger subtle pulse animation on updated score badge
+                const scoreEl = document.getElementById(`score-${id}`);
+                if (scoreEl) {
+                    scoreEl.classList.remove('pulse');
+                    void scoreEl.offsetWidth; // Reflow
+                    scoreEl.classList.add('pulse');
+                }
+            }
+        }
+
+        function render() {
+            // Calculate total score per performer
+            performers.forEach(p => {
+                p.total = p.rounds.reduce((sum, score) => sum + score, 0);
+            });
+
+            // Rank performers descending by total score
+            performers.sort((a, b) => b.total - a.total);
+
+            renderPodium();
+            renderList();
+        }
+
+        function renderPodium() {
+            const podium = document.getElementById('winnerPodium');
+            const namesEl = document.getElementById('winnerNames');
+            const scoreEl = document.getElementById('winnerScoreDisplay');
+
+            if (performers.length === 0) {
+                podium.style.display = 'none';
+                return;
+            }
+
+            const maxScore = Math.max(...performers.map(p => p.total));
+
+            if (maxScore <= 0) {
+                podium.style.display = 'none';
+                return;
+            }
+
+            podium.style.display = 'block';
+
+            // Find overall leaders (supports ties)
+            const winners = performers.filter(p => p.total === maxScore);
+            namesEl.innerText = winners.map(w => w.name).join(' & ');
+            scoreEl.innerText = `Grand Total: ${maxScore} pts`;
+        }
+
+        function renderList() {
+            const container = document.getElementById('performersList');
+            container.innerHTML = '';
+
+            let currentRank = 1;
+
+            performers.forEach((performer, index) => {
+                // Compute tie ranks
+                if (index > 0 && performer.total < performers[index - 1].total) {
+                    currentRank = index + 1;
+                }
+
+                const rankDisplay = currentRank === 1 ? '&#129351;' :
+                                    currentRank === 2 ? '&#129352;' :
+                                    currentRank === 3 ? '&#129353;' : currentRank;
+
+                const card = document.createElement('div');
+                card.className = 'performer-card';
+
+                // Build Card Header
+                let cardHTML = `
+                    <div class="card-header">
+                        <div class="left-info">
+                            <span class="rank-badge">${rankDisplay}</span>
+                            <span class="performer-name">${escapeHtml(performer.name)}</span>
+                        </div>
+                        <div class="right-info">
+                            <div class="total-score-badge" id="score-${performer.id}">${performer.total}</div>
+                            <button class="btn-toggle-rounds" onclick="toggleDrawer(${performer.id})">
+                                ${performer.expanded ? 'Hide Rds' : 'Rounds'}
+                            </button>
+                            <button class="btn-delete" onclick="deletePerformer(${performer.id})" title="Delete">&times;</button>
+                        </div>
+                    </div>
+                `;
+
+                // Build 20-Round Drawer Grid
+                cardHTML += `
+                    <div class="rounds-drawer ${performer.expanded ? 'open' : ''}">
+                        <div class="drawer-title">Enter Scores (R1 - R20)</div>
+                        <div class="rounds-grid">
+                `;
+
+                for (let r = 0; r < 20; r++) {
+                    const val = performer.rounds[r] === 0 ? '' : performer.rounds[r];
+                    cardHTML += `
+                        <div class="round-box">
+                            <span class="round-label">R${r + 1}</span>
+                            <input type="number" 
+                                   class="round-input" 
+                                   value="${val}" 
+                                   placeholder="0"
+                                   pattern="[0-9]*"
+                                   inputmode="numeric"
+                                   onchange="updateRoundScore(${performer.id}, ${r}, this.value)">
+                        </div>
+                    `;
+                }
+
+                cardHTML += `
+                        </div>
+                    </div>
+                `;
+
+                card.innerHTML = cardHTML;
+                container.appendChild(card);
+            });
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+        }
+
+        // Initialize App
+        render();
+    </script>
+</body>
+</html>
